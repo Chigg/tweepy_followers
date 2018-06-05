@@ -16,7 +16,7 @@ import re
 #These are keys that twitter gives you when you register an App
 #
 keys = []
-inFile = open("/home/higgins_colin/tweepy_followers/keys", "r")
+inFile = open("/home/colin/Desktop/keys", "r")
 for line in inFile:
 	line = line.strip()
 	keys.append(line)
@@ -89,17 +89,22 @@ def check_connectivity(ids, original_user):
 		for root in ids:
 			out_list = []
 			out_list.insert(0, root)
-			print("follower ", i, " of ", len(ids))
+			print("follower ", i+1, " of ", len(ids))
 			num_mutual = 0
+			
 			for node in ids:
+
 				rate_count += 1
-				print(rate_count)
+				if root == node:
+					break
+
+				print(root, node)
 
 				while True:
 					try:
 						#check if user is friends
 						out = (api.show_friendship(source_id = root, target_id = node))
-
+						print(out)
 						#rate_count = num of queries
 						#this if statement attempts to prevent hitting rate limit
 						if rate_count == 150:
@@ -119,6 +124,8 @@ def check_connectivity(ids, original_user):
 
 				#if user is following = true
 				if(out[0].following):
+
+					print("BING")
 					num_mutual += 1
 					out_list.append(node)
 
@@ -129,7 +136,7 @@ def check_connectivity(ids, original_user):
 
 			#this attempts to create a degree of connectivity by dividing total number of mutuals
 			#by the total number of root node followers
-			u_centrality = num_mutual // len(ids)
+			u_centrality = num_mutual / len(ids)
 
 			centrality_list.append(u_centrality)     
 			i += 1
@@ -144,9 +151,10 @@ def main():
 	start = time.time()
 	print("start time: {0}".format(strftime("%H:%M:%S"), gmtime()))
 
-	nameFile = open("/home/higgins_colin/tweepy_followers/usernames", "r")
+	nameFile = open("/home/colin/tweepy_followers/usernames", "r")
 
 	for username in nameFile:
+		centrality_list = []
 		data = api.rate_limit_status()
 		x = data['resources']['followers']['/followers/ids']
 		rate_limit_left = x['remaining']
@@ -176,7 +184,7 @@ def main():
 
 
 		totaldowntime += downtime
-
+		print(centrality_list)
 		print ("writing to analysis.csv")
 		with open("analysis.csv", 'a') as endfile:
 			out_writer = csv.writer(endfile, delimiter= '|')
