@@ -182,7 +182,7 @@ def main():
 			out_writer = csv.writer(endfile, delimiter= '|')
 
 			centrality_list.insert(0, original_user)
-			writer.writerow(centrality_list)
+			out_writer.writerow(centrality_list)
 
 	print("TOTAL TIME LOST TO API RATE LIMIT: ", totaldowntime/60, "MINUTES")
 
