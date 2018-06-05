@@ -6,6 +6,7 @@ import csv
 import tweepy
 
 #for timing function
+from time import gmtime, strftime
 import time
 
 #regex library
@@ -17,8 +18,8 @@ import re
 keys = []
 inFile = open("/home/colin/Desktop/keys", "r")
 for line in inFile:
-    line = line.strip()
-    keys.append(line)
+	line = line.strip()
+	keys.append(line)
 
 consumer_key = str(keys[0])
 consumer_secret = str(keys[1])
@@ -33,99 +34,159 @@ auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_key, access_secret)
 api = tweepy.API(auth)
 
-def get_followers(username, original_user, new_user, first_loop):
+def get_followers(username):
 
-    ids = []
-    user_names = []
-    i = 0
+	ids = []
+	i = 0
 
-    #finds follower ids up to 1000
-    for page in tweepy.Cursor(api.followers_ids, screen_name = username).pages():
+	#finds follower ids
+	for page in tweepy.Cursor(api.followers_ids, screen_name = username).pages():
 
-        ids.extend(page)
-        i += 1
-        print("getting followers: %s" %(len(ids)))
+		ids.extend(page)
+		i += 1
+		print("getting followers: %s" %(len(ids)))
 
-        if len(ids) >= 1000:
-                break
+		#only collect up to 1000
+		if len(ids) >= 1000:
+				break
 
-        #3 queries then 5 min break, 500 users per query
-        if i == 3:
-            print("Avoiding rate_limit. Wait 5 mins.")
-            time.sleep(300)
-            i = 0
+		#3 queries then 5 min break, 500 users per query
+		if i == 3:
+			print("Avoiding rate_limit. Wait 5 mins.")
+			time.sleep(300)
+			i = 0
 
-    #prints total gathered followers
-    print("Follower count gathered: ", len(ids))
-    start = 0
-    chunk = 100
-    #while the ids still has more.
-    #if it's first loop, find followers, else, just use ids.
-    while start < len(ids):
-        if first_loop:
-            upper_bound = min(len(ids), start + chunk)
+	#prints total gathered followers
+	print("Follower count gathered: ", len(ids))
+	return(ids)
 
-            #twitter only allows getting usernames for chunks of 100 ids
-            user_objs = api.lookup_users(user_ids = ids[start:upper_bound])
-            for user in user_objs:
-                user_names.append(user.screen_name)
-            print("loading usernames... ", len(user_names))
+def check_connectivity(ids, original_user):
 
-            #iterate by 100
-            start += chunk
-        else:
-            user_names = ids
-            break
+	downtime = 0
+	i = 0
+	out_list = []
+	centrality_list = []
 
-    #shows writing to a new file
-    print ("writing to {0}_followers_tweets.csv".format(original_user))
-    with open("{0}_followers.csv".format(original_user) , 'a') as file:
-        writer = csv.writer(file, delimiter= '|')
+	#shows writing to a new file
+	print ("writing to {0}_followers_tweets.csv".format(original_user))
+	with open("{0}_followers.csv".format(original_user) , 'w') as file:
+		writer = csv.writer(file, delimiter= '|')
 
-        #each row is 1 ID
+		#start with original user's followers' ids
+		out_list = ids
+		out_list.insert(0, original_user)
+		print(out_list)
+		#append and then prepare for new rows for follower's mutual followers
+		writer.writerow(out_list)
+		out_list = []
 
-        out_list = user_names
-        out_list.insert(0, new_user)
-        writer.writerow(out_list)
+		#now that we wrote the original user, we can remove
+		#from the check since we already know the ids are friends of original_user
+		ids.remove(original_user)
 
-    return(user_names)
+		rate_count = 0
 
+		for root in ids:
+			out_list = []
+			out_list.insert(0, root)
+			print("follower ", i, " of ", len(ids))
+			num_mutual = 0
+			for node in ids:
+				rate_count += 1
+				print(rate_count)
+
+				while True:
+					try:
+						#check if user is friends
+						out = (api.show_friendship(source_id = root, target_id = node))
+
+						#rate_count = num of queries
+						#this if statement attempts to prevent hitting rate limit
+						if rate_count == 150:
+							print("Avoiding rate Limit at {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
+							time.sleep(900)
+							downtime += 900
+							rate_count = 0
+
+					except tweepy.TweepError:
+						print("YOU HIT THE RATE LIMIT AT {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
+						time.sleep(900)
+						downtime += 900
+						continue
+
+					break
+
+
+				#if user is following = true
+				if(out[0].following):
+					num_mutual += 1
+					out_list.append(node)
+
+			print()
+			print("writing to list")
+			writer.writerow(out_list)
+			print()
+
+			#this attempts to create a degree of connectivity by dividing total number of mutuals
+			#by the total number of root node followers
+			u_centrality = num_mutual // len(ids)
+
+			centrality_list.append(u_centrality)     
+			i += 1
+
+	file.close()
+	return(centrality_list, downtime)
 
 def main():
 
-    username = str(input("Enter a twitter username (no @):"))
+	totaldowntime = 0
+	downtime = 0
+	start = time.time()
+	print("start time: {0}".format(strftime("%H:%M:%S"), gmtime()))
 
-    #for timer
-    start = time.time()
+	nameFile = open("/home/colin/Desktop/SchoolWork/twitter_SG/usernames", "r")
 
-    original_user = username
-    new_user = username
-    first_loop = True
-    user_names = get_followers(username, original_user, new_user, first_loop)
+	for username in nameFile:
+		data = api.rate_limit_status()
+		x = data['resources']['followers']['/followers/ids']
+		rate_limit_left = x['remaining']
 
-    #runs origianl user's followers through get_tweets
-    print("\nNow searching followers' followers:")
-    i = 0
-    for name in user_names:
-        i += 1
-        first_loop = False
-        new_user = name
-        print("\nfinding", name, "'s followers...")
+		username = username.strip()
+		#username = str(input("Enter a twitter username (no @):"))
+		original_user = username
+		
+		if(rate_limit_left == 1):
+			print("Follower ID check rate-limited at {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
+			time.sleep(900)
+			downtime += 900
 
-        if i >= 5:
-            print("\nWait 15 mins\n")
-            time.sleep(900)
-            i = 0
-        #if looking up an account and privacy prevents it from accessing
-        try:
-            get_followers(name, original_user, new_user, first_loop)
+		print(username)
+		try:
+			ids = get_followers(username)
 
-        #skip account and print this message
-        except:
-            print("THIS USERS ACCOUNT IS HIDDEN.")
-            continue
+			#if the user has less than 250 followers, continue
+			if len(ids) <= 250:
+				centrality_list, downtime = check_connectivity(ids, original_user)
 
-    end = time.time()
-    print("\n elapsed time: ", end - start)
+
+		#if account privacy set to private
+		#skip account and print this message
+		except:
+			print("THIS USERS ACCOUNT IS HIDDEN.")
+
+
+		totaldowntime += downtime
+
+		print ("writing to analysis.csv")
+		with open("analysis.csv", 'a') as endfile:
+			out_writer = csv.writer(endfile, delimiter= '|')
+
+			centrality_list.insert(0, original_user)
+			writer.writerow(centrality_list)
+
+	print("TOTAL TIME LOST TO API RATE LIMIT: ", totaldowntime/60, "MINUTES")
+
+	end = time.time()
+	print("\n elapsed time: ", end - start)
 
 main()
