@@ -75,7 +75,7 @@ def check_connectivity(ids, original_user):
 		#start with original user's followers' ids
 		out_list = ids
 		out_list.insert(0, original_user)
-		print(out_list)
+		
 		#append and then prepare for new rows for follower's mutual followers
 		writer.writerow(out_list)
 		out_list = []
@@ -93,18 +93,16 @@ def check_connectivity(ids, original_user):
 			num_mutual = 0
 			
 			for node in ids:
-
 				rate_count += 1
-				if root == node:
-					break
 
-				print(root, node)
+				if root == node:
+					continue
 
 				while True:
 					try:
 						#check if user is friends
 						out = (api.show_friendship(source_id = root, target_id = node))
-						print(out)
+
 						#rate_count = num of queries
 						#this if statement attempts to prevent hitting rate limit
 						if rate_count == 150:
@@ -124,9 +122,8 @@ def check_connectivity(ids, original_user):
 
 				#if user is following = true
 				if(out[0].following):
-
-					print("BING")
 					num_mutual += 1
+					print("Bing")
 					out_list.append(node)
 
 			print()
@@ -160,6 +157,7 @@ def main():
 		rate_limit_left = x['remaining']
 
 		username = username.strip()
+
 		#username = str(input("Enter a twitter username (no @):"))
 		original_user = username
 		
