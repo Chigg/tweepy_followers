@@ -16,7 +16,7 @@ import re
 #These are keys that twitter gives you when you register an App
 #
 keys = []
-inFile = open("/home/colin/Desktop/keys", "r")
+inFile = open("/home/higgins_colin/tweepy_followers/keys", "r")
 for line in inFile:
 	line = line.strip()
 	keys.append(line)
@@ -144,7 +144,7 @@ def main():
 	start = time.time()
 	print("start time: {0}".format(strftime("%H:%M:%S"), gmtime()))
 
-	nameFile = open("/home/colin/Desktop/SchoolWork/twitter_SG/usernames", "r")
+	nameFile = open("/home/higgins_colin/tweepy_followers/usernames", "r")
 
 	for username in nameFile:
 		data = api.rate_limit_status()
