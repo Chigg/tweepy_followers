@@ -16,7 +16,7 @@ import re
 #These are keys that twitter gives you when you register an App
 #
 keys = []
-inFile = open("/home/higgins_colin/tweepy_followers/keys", "r")
+inFile = open("/home/colin/tweepy_followers/keys", "r")
 for line in inFile:
         line = line.strip()
         keys.append(line)
@@ -32,29 +32,35 @@ rate_limit = 15 #minutes
 # this block of code authenticates us with twitter's db
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_key, access_secret)
-api = tweepy.API(auth)
+api = tweepy.API(auth, wait_on_rate_limit = True, wait_on_rate_limit_notify = True)
 
 def get_followers(username):
 
         ids = []
         i = 0
+        data = api.rate_limit_status()
+        gf_status = data['resources']['followers']['/followers/ids']
 
         #finds follower ids
         for page in tweepy.Cursor(api.followers_ids, screen_name = username).pages():
+
+                #only collect up to 1000
+                if len(ids) >= 1000:
+                    break
+
+                #15 queries then 15 min break, 500 users per query
+                rate_limit_left = gf_status['remaining']
+                print(rate_limit_left)
+
+                if(rate_limit_left < 1):
+                    print("FOLLOWER ID check rate-limited at {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
+                    time.sleep(900)
+                    downtime += 900
 
                 ids.extend(page)
                 i += 1
                 print("getting followers: %s" %(len(ids)))
 
-                #only collect up to 1000
-                if len(ids) >= 500:
-                                break
-
-                #3 queries then 5 min break, 500 users per query
-                if i == 3:
-                        print("Avoiding rate_limit. Wait 5 mins.")
-                        time.sleep(300)
-                        i = 0
 
         #prints total gathered followers
         print("Follower count gathered: ", len(ids))
@@ -99,23 +105,28 @@ def check_connectivity(ids, original_user):
                                         continue
 
                                 while True:
+                                        #this if statement attempts to prevent hitting rate limit
+                                        #15 queries then 15 min break, 500 users per query
+                                        data = api.rate_limit_status()
+                                        cc_status = data['resources']['friendships']['/friendships/show']
+                                        rate_limit_left = cc_status['remaining']
+
+                                        if(rate_limit_left <= 1):
+                                            print("Follower FRIEND check rate-limited at {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
+                                            time.sleep(900)
+                                            downtime += 900
+
                                         try:
                                                 #check if user is friends
+                                                print(rate_limit_left)
                                                 out = (api.show_friendship(source_id = root, target_id = node))
 
-                                                #rate_count = num of queries
-                                                #this if statement attempts to prevent hitting rate limit
-                                                if rate_count == 150:
-                                                        print("Avoiding rate Limit at {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
-                                                        time.sleep(900)
-                                                        downtime += 900
-                                                        rate_count = 0
 
                                         except tweepy.TweepError as e:
                                                 print("you hit an error!:")
-                                                print(e.api_code)
+                                                #print(e.api_code)
                                                 print(e.reason)
-                                                print("YOU HIT THE RATE LIMIT AT {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
+                                                print("AT {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
                                                 time.sleep(900)
                                                 downtime += 900
                                                 continue
@@ -123,8 +134,8 @@ def check_connectivity(ids, original_user):
                                         break
 
 
-                                #if user is following = true
-                                if(out[0].following):
+                                #if root is followed by node, = true
+                                if(out[0].followed_by):
                                         num_mutual += 1
                                         print("Bing")
                                         out_list.append(node)
@@ -146,44 +157,51 @@ def check_connectivity(ids, original_user):
 
 def main():
 
+        #program runtime variables
         totaldowntime = 0
         downtime = 0
         start = time.time()
-        time.sleep(900)
         print("start time: {0}".format(strftime("%H:%M:%S"), gmtime()))
 
-        nameFile = open("/home/higgins_colin/tweepy_followers/usernames", "r")
+        nameFile = open("/home/colin/tweepy_followers/usernames", "r")
 
         for username in nameFile:
                 centrality_list = []
                 data = api.rate_limit_status()
-                x = data['resources']['followers']['/followers/ids']
-                rate_limit_left = x['remaining']
+                gf_status = data['resources']['followers']['/followers/ids']
 
                 username = username.strip()
 
                 #username = str(input("Enter a twitter username (no @):"))
-                original_user = username
-                
-                if(rate_limit_left == 1):
-                        print("Follower ID check rate-limited at {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
-                        time.sleep(900)
-                        downtime += 900
-
+                original_user = username     
                 print(username)
+
                 try:
+                        rate_limit_left = gf_status['remaining']
+
+                        if rate_limit_left < 1:
+                            print("FOLLOWER ID check rate-limited at {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
+                            time.sleep(900)
+                            downtime += 900
+
                         ids = get_followers(username)
 
-                        #if the user has less than 250 followers, continue
+                        #if the user has less than 150 followers, continue
                         if len(ids) <= 150:
                             centrality_list, downtime = check_connectivity(ids, original_user)
+
                         else:
                             continue
                 #if account privacy set to private
                 #skip account and print this message
-                except:
-                        print("THIS USERS ACCOUNT IS HIDDEN.")
-
+                except tweepy.TweepError as e:
+                    print("you hit an error!:")
+                    #print(e.api_code)
+                    print(e.reason)
+                    print("AT {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
+                    time.sleep(900)
+                    downtime += 900
+                    continue
 
                 totaldowntime += downtime
                 print(centrality_list)
