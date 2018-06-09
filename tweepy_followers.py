@@ -54,7 +54,7 @@ def get_followers(username):
 
                 if(rate_limit_left < 1):
                     print("FOLLOWER ID check rate-limited at {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
-                    time.sleep(900)
+                    #time.sleep(900)
                     downtime += 900
 
                 ids.extend(page)
@@ -113,7 +113,7 @@ def check_connectivity(ids, original_user):
 
                                         if(rate_limit_left <= 1):
                                             print("Follower FRIEND check rate-limited at {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
-                                            time.sleep(900)
+                                            #time.sleep(900)
                                             downtime += 900
 
                                         try:
@@ -127,7 +127,7 @@ def check_connectivity(ids, original_user):
                                                 #print(e.api_code)
                                                 print(e.reason)
                                                 print("AT {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
-                                                time.sleep(900)
+                                                #time.sleep(900)
                                                 downtime += 900
                                                 continue
 
@@ -181,7 +181,7 @@ def main():
 
                         if rate_limit_left < 1:
                             print("FOLLOWER ID check rate-limited at {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
-                            time.sleep(900)
+                            #time.sleep(900)
                             downtime += 900
 
                         ids = get_followers(username)
@@ -199,7 +199,7 @@ def main():
                     #print(e.api_code)
                     print(e.reason)
                     print("AT {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
-                    time.sleep(900)
+                    #time.sleep(900)
                     downtime += 900
                     continue
 
