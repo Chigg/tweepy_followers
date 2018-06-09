@@ -117,8 +117,7 @@ def check_connectivity(ids, original_user):
                                             downtime += 900
 
                                         try:
-                                                #check if user is friends
-                                                print(rate_limit_left)
+                                                #check users relationship info
                                                 out = (api.show_friendship(source_id = root, target_id = node))
 
 
