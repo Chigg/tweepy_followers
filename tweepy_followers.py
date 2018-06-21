@@ -16,7 +16,7 @@ import re
 #These are keys that twitter gives you when you register an App
 #
 keys = []
-inFile = open("/home/colin/tweepy_followers/keys", "r")
+inFile = open("/home/higgins_colin/tweepy_followers/keys", "r")
 for line in inFile:
         line = line.strip()
         keys.append(line)
@@ -34,7 +34,11 @@ auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_key, access_secret)
 api = tweepy.API(auth, wait_on_rate_limit = True, wait_on_rate_limit_notify = True)
 
+downtime = 0 
+
 def get_followers(username):
+
+        downtime = 0
 
         ids = []
         i = 0
@@ -162,7 +166,7 @@ def main():
         start = time.time()
         print("start time: {0}".format(strftime("%H:%M:%S"), gmtime()))
 
-        nameFile = open("/home/colin/tweepy_followers/usernames", "r")
+        nameFile = open("/home/higgins_colin/tweepy_followers/usernames", "r")
 
         for username in nameFile:
                 centrality_list = []
