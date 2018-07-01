@@ -130,7 +130,8 @@ def check_connectivity(ids, original_user):
                                                 #print(e.api_code)
                                                 print(e.reason)
                                                 print("AT {0}: Waiting 15 mins".format(strftime("%H:%M:%S"), gmtime()))
-                                                #time.sleep(900)
+                                                print("more detailed info: ", e)
+                                                time.sleep(900)
                                                 downtime += 900
                                                 continue
 
